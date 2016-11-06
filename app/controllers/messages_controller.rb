@@ -9,9 +9,12 @@ class MessagesController < ApplicationController
         message = current_user.messages.build(message_params)
         if message.save
             ActionCable.server.broadcast 'room_channel',
-                                         content: message.content,
-                                         username: message.user.username
-            head :ok
+                                         message: render_message(message)
+
+            message.mentions.each do |mention|
+                ActionCable.server.broadcast "room_channel_user_#{mention.id}",
+                                             mention: true
+            end
         end
     end
 
@@ -25,4 +28,8 @@ class MessagesController < ApplicationController
     def message_params
         params.require(:message).permit(:content)
     end
+
+    def render_message(message)
+        render(partial: 'message', locals: { message: message })
+   end
 end
